@@ -45,6 +45,70 @@ class ApiController extends Controller
         return response()->json($data);
     }
 
+    public function storeUserData(Request $request)
+    {
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'user_id' => 'required|string|unique:user_data',
+            'name' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'city' => 'required|string|max:255',
+            'country' => 'required|string|max:255',
+            'pincode' => 'required|integer',
+            'email' => 'required|email|unique:user_data',
+            'mobile_no' => 'required|digits_between:10,15',
+            'messages' => 'nullable|array', // Optional messages array
+            'messages.*.id' => 'required_with:messages|integer',
+            'messages.*.msg' => 'required_with:messages|string',
+            'messages.*.timestamp' => 'required_with:messages|date_format:Y-m-d H:i:s',
+        ]);
+
+        // Create new user with messages
+        $userData = UserData::create([
+            'user_id' => $validatedData['user_id'],
+            'name' => $validatedData['name'],
+            'state' => $validatedData['state'],
+            'city' => $validatedData['city'],
+            'country' => $validatedData['country'],
+            'pincode' => $validatedData['pincode'],
+            'email' => $validatedData['email'],
+            'mobile_no' => $validatedData['mobile_no'],
+            'messages' => $validatedData['messages'] ?? [], // Default to empty array
+        ]);
+
+        return response()->json(['message' => 'User data stored successfully', 'data' => $userData], 201);
+    }
+
+    public function updateUserData(Request $request, $user_id)
+    {
+        // Find the user by ID
+        $user = UserData::find($user_id);
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        // Validate the incoming request data
+        $validatedData = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'state' => 'sometimes|string|max:255',
+            'city' => 'sometimes|string|max:255',
+            'country' => 'sometimes|string|max:255',
+            'pincode' => 'sometimes|integer',
+            'email' => 'sometimes|email|unique:user_data,email,' . $user->id,
+            'mobile_no' => 'sometimes|digits_between:10,15',
+            'messages' => 'nullable|array', // Optional messages array
+            'messages.*.id' => 'required_with:messages|integer',
+            'messages.*.msg' => 'required_with:messages|string',
+            'messages.*.timestamp' => 'required_with:messages|date_format:Y-m-d H:i:s',
+        ]);
+
+        // Update user data
+        $user->update(array_filter($validatedData));
+
+        return response()->json(['message' => 'User data updated successfully', 'data' => $user]);
+    }
+
     public function deleteMessage($user_id, $msg_id)
     {
         // Find the user by ID
